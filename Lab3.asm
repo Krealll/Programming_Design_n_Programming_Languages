@@ -297,6 +297,7 @@ Cmp flagNeg,1
 Jne pri
 Mov dx,2dh
 Push dx
+inc di
 pri:
 pop dx
 mov ah, 02h
@@ -310,7 +311,7 @@ endp showResult
 
 ;description
 proc checkFL
-pusha
+        push cx
 
 Cmp flagNeg,1
 Je setfn
@@ -320,12 +321,13 @@ Setfn:
 Mov cx,0h
 Nexttt:
 Cmp ax,8000h
-Jb end
-Mov flagNeg,cx
+Jb endd
 Neg ax
-
+Mov flagNeg,cx
 endd:
-popa
+
+
+ pop cx
 ret
 endp checkFL
 
@@ -368,11 +370,12 @@ call showResult
 mov dx, offset newLine
 call puts
 mov ax,1
-mov word ptr [si], ax ; problem?; problem?
+mov word ptr [si], ax ;
 shr eax,16
 mov ax,0
 mov word ptr [si]+2,ax ; here
 
+mov flagNeg,0
 mov bx, OFFSET Matrix
 add bx, two
 inc two
