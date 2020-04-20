@@ -36,7 +36,7 @@ WINCounter			dw 0000h
 vBorderSym 			equ 0F7Ch
 hBorderSym 			equ 0F16h
 spaceSym 			equ 0020h 
-fillSym 			equ 8020h 
+fillSym 			equ 0820h 
 landSym 			equ 0F53h 
 xonSym 				equ 5020h ; xonix game name block
 
@@ -96,7 +96,7 @@ screen 				dw xSize dup(hBorderSym)
 area 				dw 0430h,0430h,0F25h,fillSym,0F43h,0F6Fh,0F6Eh,0F74h,0F72h,0F6Fh,0F6Ch,0F73h,0F3Ah,fillSym,0F20h,0F4Dh,0F6Fh,0F76h,0F65h,0F2Dh,0F77h,0F2Ch,0F73h,0F2Ch,0F61h,0F2Ch,0F64h,0F3Bh, xSize-56 dup(fillSym)
 					dw fillSym,fillSym, xonSym, fillSym,fillSym, xonSym,fillSym, xonSym,fillSym, xonSym,xonSym,fillSym, xonSym,fillSym, xonSym,fillSym,fillSym, xonSym,fillSym,0F7Ch,23 dup (fillSym),0F2Dh,0F2Fh,0F2Bh,0F20h,0F64h,0F65h,0F63h,0F2Fh,0F69h,0F6Eh,0F63h,0F20h,0F67h,0F65h,0F6Eh,0F65h,0F72h,0F61h,0F6Ch,0F20h,0F73h,0F70h,0F65h,0F65h,0F64h, xSize-68 dup(fillSym)
 					dw fillSym, xonSym,fillSym, xonSym,fillSym,fillSym, xonSym,fillSym,fillSym,xonSym,fillSym, xonSym,xonSym,fillSym, xonSym,fillSym, xonSym,fillSym, xonSym, 0F7Ch,0F4Ch,0F69h,0F66h,0F65h,0F3Ah,0F20h
-life				dw 0933h, 16 dup (fillSym),0F39h,0F2Fh,0F30h,0F20h,0F64h,0F65h,0F63h,0F2Fh,0F69h,0F6Eh,0F63h,0F20h,0F65h,0F6Eh,0F65h,0F6Dh,0F79h,0F20h,0F73h,0F70h,0F65h,0F65h,0F64h, xSize-67 dup(fillSym)
+life				dw 0933h, 16 dup (fillSym),0F39h,0F2Fh,0F30h,0F20h,0F64h,0F65h,0F63h,0F2Fh,0F69h,0F6Eh,0F63h,0F20h,0F65h,0F6Eh,0F65h,0F6Dh,0F79h,0F20h,0F73h,0F70h,0F65h,0F65h,0F64h, xSize-66 dup(fillSym)
 
 GObannerWidth 		equ 40
 GObannerLines		equ 10	 	 
