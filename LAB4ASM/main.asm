@@ -1189,8 +1189,8 @@ moveHero proc				; procedure that checks the next cell and
 	cmp flagDoNothing,1
 	je jmpMoveHeroEnd
 	jmp moveHeromark
-jmpMoveHeroEnd:					; that "code construction" is necessary for "far jump" 
-	jmp moveHeroEnd				; as jmp is automatically transforms into "far jump" when it is necessary, but jxx dont
+jmpMoveHeroEnd:					
+	jmp moveHeroEnd				
 moveHeromark:
 	cmp screen[si], spaceSym
 	jne _continue
