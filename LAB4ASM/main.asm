@@ -659,11 +659,11 @@ setLeftLow proc 		; input: bx - cell current Pos; ax - cell direction( ah - left
 						;  			right cell
 						;  	 		  |
 						; 	 		  v
-	cmp ah,01 			;  			_ _ _
-	jne minus__ 		; 		   |_|_|_|<---right low
-						;left----->|_|0|_<---— current pos
-	cmp al,01  			;left-low->|_| |_|<------back cell
-	je to_yLL  			;
+	cmp ah,01 				;  			_ _ _
+	jne minus__ 				; 		       |_|_|_|<---right low
+						;            left----->|_|0|_<---— current pos
+	cmp al,01  				;            left-low->|_| |_|<------back cell
+	je to_yLL  			
 
 	add bh,1
 	jmp setLeftLowEnd
