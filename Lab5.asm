@@ -40,20 +40,8 @@ msgEOF db "EOF encountered",0Dh,0Ah,'$'
 msgWrited db "Writed!",0Dh,0Ah,'$'
 msgBuffEnded db "BuffEnded!",0Dh,0Ah,'$'
 
-fd0 db "fd - 0",0Dh,0Ah,'$'
-fd1 db "fd - 1",0Dh,0Ah,'$'
-fk0 db "fk - 0",0Dh,0Ah,'$'
-fk1 db "fk - 1",0Dh,0Ah,'$'
-fsp0 db "fsp - 0",0Dh,0Ah,'$'
-fsp1 db "fsp - 1",0Dh,0Ah,'$'
 srcFileName dw 0
 destFileName dw 0
-
-flagSkip db 1
-flagArg db 0
-flagDelim db 0
-flagKeepDel db 0
-flagSetPos db 0
 
 maxBuff equ 1000
 buffPtr dw ?
@@ -125,33 +113,6 @@ checkTimeLoop:
 	pop ax 
 	ret 
 endp
-
-showFlags proc
-
-    cmp flagDelim,1
-    je shfd
-    puts fd0
-    jmp fps
-shfd:
-    puts fd1 
-fps:    
-    cmp flagSetPos,1
-    je shfsp
-    puts fsp0
-    jmp fdkk
-shfsp:
-    puts fsp1  
-fdkk:
-    cmp flagKeepDel,1
-    je shfk
-    puts fk0
-    jmp showFlagsEnd
-shfk:
-    puts fk1
-
-showFlagsEnd:
-    ret
-endp showFlags
 
 readFile proc
     mov ah, 3Fh
@@ -479,5 +440,3 @@ parseEnd:
 endp parse
 
 end main
-    
-
