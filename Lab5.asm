@@ -43,6 +43,12 @@ msgBuffEnded db "BuffEnded!",0Dh,0Ah,'$'
 srcFileName dw 0
 destFileName dw 0
 
+flagSkip db 1
+flagArg db 0
+flagDelim db 0
+flagKeepDel db 0
+flagSetPos db 0
+
 maxBuff equ 1000
 buffPtr dw ?
 bufSize dw ?
