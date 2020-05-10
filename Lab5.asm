@@ -1,7 +1,7 @@
-.model small
-.stack 100h
-
-.data 
+.model small			;Program recieves 3 arguments throught comand line: 1 - source file 2 - destination file
+.stack 100h			;							3 - set of symbols
+				;	program writes to dest file all strings, except strings that have all of symbols of the set
+.data 				;										(may be in random order)
 msgStart db "Start...",0Dh,0Ah,'$'
 msgEnd db "...End",0Dh,0Ah,'$'
 msgPropArg db "Proper arguments example:comand [fullpath]\sourceFileName.txt [fullpath]\destinationFileName.txt [Set of symbols to be excluded]",0Dh,0Ah,'$'
