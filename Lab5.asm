@@ -1,13 +1,15 @@
-.model small			;Program recieves 3 arguments throught comand line: 1 - source file 2 - destination file
-.stack 100h			;							3 - set of symbols
-				;	program writes to dest file all strings, except strings that have all of symbols of the set
-.data 				;										(may be in random order)
+.model small
+.stack 100h
+
+.data 
 msgStart db "Start...",0Dh,0Ah,'$'
 msgEnd db "...End",0Dh,0Ah,'$'
+msgErrArg db "Error: incorrect arguments.",0Dh,0Ah,'$'
 msgPropArg db "Proper arguments example:comand [fullpath]\sourceFileName.txt [fullpath]\destinationFileName.txt [Set of symbols to be excluded]",0Dh,0Ah,'$'
 
-msgErrArg db "Error: incorrect arguments.",0Dh,0Ah,'$'
-msgErrBadId db "Error Bad file Id",0Dh,0Ah,'$'
+msgTempFile db "Temp file:",0Dh,0Ah,'$'
+msgTempFileO db "Temp file Opened",0Dh,0Ah,'$'
+
 msgErrNf db "Error File not found",0Dh,0Ah,'$'
 msgErrPnf db "Error Path not found",0Dh,0Ah,'$'
 msgErrWrm db "Error Wrong mode",0Dh,0Ah,'$'
@@ -23,11 +25,7 @@ msgErrTTD db "Error while adding temp to dest",0Dh,0Ah,'$'
 msgErrBid db "Error Bad id",0Dh,0Ah,'$'
 msgErrPutLog db "Error while putting in log",0Dh,0Ah,'$'
 msgErrOpenLog db "Error while opening log",0Dh,0Ah,'$'
-msgErrWNL  db "Error while writing NL",0Dh,0Ah,'$'
 
-
-msgTempFile db "Temp file:",0Dh,0Ah,'$'
-msgTempFileO db "Temp file Opened",0Dh,0Ah,'$'
 msgFlagDeWasKilled db "Flag deleted was killed",0Dh,0Ah,'$'
 msgClosed db "Closed",0Dh,0Ah,'$'
 msgDeleted db "Deleted",0Dh,0Ah,'$'
@@ -37,12 +35,10 @@ msgSetPos db "SetPOs",0Dh,0Ah,'$'
 msgEOF db "EOF encountered",0Dh,0Ah,'$'
 msgWrited db "Writed!",0Dh,0Ah,'$'
 msgWritedNL db "NL Writed!",0Dh,0Ah,'$'
+msgWritedNLL db "NL Writed LAST!",0Dh,0Ah,'$'
 msgTempFileW db "Temp Writed!",0Dh,0Ah,'$'
 msgWTL db "Temp Writed LAST!",0Dh,0Ah,'$'
 msgBuffEnded db "BuffEnded!",0Dh,0Ah,'$'
-logFileName db "u:\log.txt",0
-logFile dw 0 
-
 NL  db 0Ah
 srcFile dw 0
 srcFileName db 50 dup(0)
@@ -52,8 +48,9 @@ destFileName db 50 dup(0)
 
 tempFile dw 0
 tempFileName db "u:\temp0.txt",0
+logFileName db "u:\log.txt",0
+logFile dw 0 
 
-flagKeepCheck db 0
 flagWriteNL db 0 
 flagDelim db 0
 flagKeepDel db 0
@@ -73,16 +70,14 @@ maxCmd  equ 126
 cmdSize db ?
 cmdBuff db maxCmd dup(?)
 
-delBuff db 50 dup('$')
-delBuffLen db ?
 delSym db 50 dup(0)
 delSymLen db ?
 spaceSym equ 20h
 tabSym equ 09h 
 CRSym equ 0Dh
 NLSym equ 0Ah
-
 .code
+
 main:
     mov ax,@data
     mov es, ax
@@ -135,7 +130,7 @@ mainEnd:
     pop dx
     mov bx, logFile
     call closeFile
-
+    
     mov ah,4Ch
     int 21h
 
@@ -157,6 +152,7 @@ errOpenLog:
     pop dx
     mov dx,1
 openLogEnd:
+
     ret
 endp openLog
 
@@ -166,6 +162,7 @@ puts proc
     push ax
     push di 
     mov si,dx
+    
 loopLog:
     mov cx,0001h  
     mov bx, logFile
@@ -189,6 +186,7 @@ errPuts:
     int 21h
     pop ax
     pop dx
+    
 putsEnd:
     pop di 
     pop ax
@@ -197,32 +195,11 @@ putsEnd:
     ret
 endp puts
 
-Sleep proc 					; proc that wait for RTC to reach time=RTC+generalWaitTime
-	push ax 
-	push bx 
-	push cx
-	push dx 
-	mov ax, 00h 
-	int 1Ah 
-	add dx, 0009h 
-	mov bx, dx 
-checkTimeLoop: 
-	mov ax, 00h 
-	int 1Ah 
-	cmp dx, bx
-	jl checkTimeLoop 
-	pop dx 
-	pop cx 
-	pop bx 
-	pop ax 
-	ret 
-endp   Sleep
-
-readFile proc   ; input: bx- file id, dx - recieving buffer, cx - num of bytes to be readed
-    mov ah, 3Fh ; output : ax - num of readed bytes
+readFile proc
+    mov ah, 3Fh
     int 21h
     jb readFileErr
-    jmp readFileEnd
+    jmp readedMsg
 readFileErr:
     mov dx,1
     push dx 
@@ -230,17 +207,17 @@ readFileErr:
     call puts 
     pop dx
     jmp readFileEnd
-readFileEnd:
+readedMsg:    
     push dx 
     mov dx, offset msgReaded
-    call puts  
-    pop dx    
+    call puts 
+    pop dx
+readFileEnd:    
     ret
 endp readFile
 
-checkBuff proc               ; procedure that recieve buff pointer, buff size, checks buffer for delimited symbols and
+checkBuff proc
     xor bx,bx
-
     cmp flagKeepDel,1
     jne checkBuffBegin
     mov flagDelim,1
@@ -249,7 +226,6 @@ checkBuffBegin:
     xor di,di
     mov cx, buffSize         ;num of symbols that were readed
     xor ax,ax
-    
 loopCheckDel:
     lodsb
     cmp flagDelim,0
@@ -258,116 +234,124 @@ loopCheckDel:
 checkCR:    
     cmp al, CRSym
     je checkSetPosMark
+    
     loop loopCheckDel
 
     cmp flagDelim,1
-    je setKeepDel
+    je setKeep
     mov bx,buffSize
-
     cmp flagTempFile,1
-    je checkBuffEnd
-
+    je jmpcheckBuffEnd
     mov flagTempFile,1
     push bx
-    call createTemp
+    call openTemp
     pop bx
-    jmp checkBuffEnd  
-setKeepDel:    
+jmpcheckBuffEnd:    
+    jmp checkBuffEnd
+jmpsetKeepFalg0:
+    jmp setKeepFalg0    
+setKeep:    
     mov flagKeepDel,1
 
     jmp checkBuffEnd
 checkSetPosMark:
-    mov flagKeepCheck, 0
+    cmp cx,1h
+    jne jmpToCheckSetPos
+    mov flagWriteNL,1
+jmpToCheckSetPos:    
+    mov bx, buffSize
+    sub bx, cx
     call checkSetPos            ; sets proper bx and flagSetPos
     
     cmp flagTempFile,0
-    je setKeepFlagDel
-    call manageTempFile
-
-setKeepFlagDel:
-    mov flagKeepDel,0
-checkBuffEnd:
-    ret 
-endp checkBuff
-
-manageTempFile proc
-
+    je jmpsetKeepFalg0
     mov flagTempFile,0
+
     cmp flagKeepDel,1
     je delTemp
 
     cmp flagDelim,1
     je delTemp
-    push dx
+    push dx 
     mov dx, offset msgWTL
     call puts
     pop dx
-
     cmp flagWriteNL,1
-    jne writeTempLast
+    jne wttl
     dec bx 
-writeTempLast:
+wttl:
     mov cx,bx               ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; + check close that flushes
     mov bx,tempFile
     mov dx, buffPtr
     call writeToFile
     cmp dx,1
-    je manageTempFileEnd
-    push dx
-    mov dx, offset msgTempFileW
-    call puts
-    pop dx
+    je jmpcheckBuffEnd
 
     cmp flagWriteNL,1
     jne closeTemp
     push bx
-    mov bx,tempFile
-    call writeNL   
+        mov cx,1h
+        mov bx,tempFile
+        mov dx,offset NL
+        mov ah,40h          
+        int 21h
+        jb checkBuffEnd
+        mov falgSkipNL,1
+        mov flagWriteNL,0
+        push dx 
+        mov dx, offset msgWritedNLL 
+        call puts 
+        pop dx
     pop bx
-
 closeTemp:
     push bx
     mov bx, tempFile
     call closeFile
     pop bx
     cmp dx,1
-    je manageTempFileEnd
-
+    je checkBuffEnd
+    
     call addTempToDest
     cmp dx,1
-    je manageTempFileEnd
+    je checkBuffEnd
 delTemp:
-    push bx 
+    push bx
     mov bx, tempFile
     call closeFile
     pop bx
     cmp dx,1
-    je manageTempFileEnd
-
+    je checkBuffEnd
+    
     push bx
     mov dx, offset tempFileName
     call delFile
     pop bx
     mov flagDelim,0
     cmp dx,1
-    je manageTempFileEnd
-manageTempFileEnd:
-    ret
-endp manageTempFile
+    je checkBuffEnd
+setKeepFalg0:
+    mov flagKeepDel,0
+checkBuffEnd:
+    ret 
+endp checkBuff
 
 addTempToDest proc
-    push dx
+    push bx
+    push dx 
     mov dx, offset msgTempFile
     call puts
     pop dx
 
-    push bx
+    push dx 
+    mov dx, offset msgTempFileO
+    call puts
+    pop dx
     mov ah, 3Dh			
     mov al, 20h			
     mov dx, offset tempFileName
     mov cl, 01h			
     int 21h
-    jb addTempToDestEnd	
+    jb checkBuffEnd	
     mov tempFile, ax	
 
     mov bx, tempFile
@@ -405,7 +389,7 @@ errAddTempToDest:
     call puts
     pop dx
 addTempToDestEnd:
-    push dx
+    push dx 
     mov dx, offset msgAdded
     call puts
     pop dx
@@ -414,9 +398,9 @@ addTempToDestEnd:
 endp addTempToDest
 
 closeFile proc
-    push dx
+    push dx 
     mov dx, offset msgClosed
-    call puts
+    call puts   
     pop dx
     xor ax,ax
     mov ah,3eh
@@ -424,12 +408,14 @@ closeFile proc
     jb errcloseFile
     jmp closeFileEnd
 errcloseFile:
+             ;;;;
     push dx 
     mov dx, offset msgErrClose
     call puts
     pop dx
     mov dx,1
 closeFileEnd:
+  
     ret
 endp closeFile
 
@@ -441,122 +427,85 @@ delFile proc
     jmp delFileEnd
 errDelTemp:
     push dx 
-    mov dx, offset msgErrDel      
+    mov dx, offset msgErrDel      ;;;;;;
     call puts  
     pop dx
     mov dx,1
 delFileEnd:
-    push dx
-    mov dx, offset msgDeleted
-    call puts
+    push dx 
+    mov dx, offset msgDeleted 
+    call puts 
     pop dx
     ret
 endp delFile
 
-openFile proc               ;input: dx - fileName(ASCIZ); al - access mode ; cl - attributes
-    mov ah, 3Dh             ; ;; opens existing file
-    int 21h                 ; output: ax - file identificator; puts Error message if operation was failed
-    jb errOpenFile
-    jmp openFileEnd
-errOpenFile:
-    call manageError
-openFileEnd:
-    ret
-endp openFile
+openTemp proc
+    push dx 
+    mov dx, offset msgTempFileO 
+    call puts 
+    pop dx
+    mov ah, 3Ch
+    mov cx, 00h			    
+    mov dx, offset tempFileName
+    int 21h
+    jb errorTempOpen
+    mov tempFile,ax
 
-createFile proc                   ;input: dx - fileName(ASCIZ); cl - attributes
-    mov ah, 3Ch                   ; ;; Creates file, if it's already exists - sets it's length to 0 
-    int 21h                       ; output: ax - file identificator; puts Error message if operation was failed
-    jb errcreateFile
-    jmp createFileEnd
-errcreateFile:
-    call manageError
-createFileEnd:
-    ret
-endp createFile
-
-manageError proc                   
+    mov bx, tempFile
+    xor al ,al 			
+    xor cx, cx
+    xor dx, dx			
+    call setFilePtr
+    cmp dx,1
+    je errorTempOpen
+    jmp openTempEnd
+errorTempOpen:
     mov dx,1
-    cmp ax,02h
-    je nf
-    cmp ax, 03h
-    je pnf
+    push dx 
+    mov dx, offset msgTempFile 
+    call puts 
+    pop dx
+    cmp ax,03h 
+    je tpath
     cmp ax,04h
-    je tomch
+    je ttmn
     cmp ax,05h
-    je access
+    je tacc
     cmp ax,06h
-    je badid
-    cmp ax,0Ch
-    je wrr
+    je tid
     push dx 
     mov dx, offset msgErrOpen 
     call puts
     pop dx
-    jmp manageErrorEnd
-nf:
+    jmp openTempEnd
+tid:    
     push dx 
-    mov dx, offset msgErrNf 
+    mov dx, offset msgErrBid 
     call puts
     pop dx
-    jmp manageErrorEnd
-pnf:
+    jmp openTempEnd
+tpath:
     push dx 
     mov dx, offset msgErrPnf 
     call puts
     pop dx
-    jmp manageErrorEnd
-tomch:
+    jmp openTempEnd
+ttmn:
     push dx 
     mov dx, offset msgErrTmn 
     call puts
     pop dx
-    jmp manageErrorEnd
-access:
+    jmp openTempEnd
+tacc:
     push dx 
     mov dx, offset msgErrAcc 
     call puts
     pop dx
-    jmp manageErrorEnd
-wrr:
-    push dx 
-    mov dx, offset msgErrWrm 
-    call puts
-    pop dx
-    jmp manageErrorEnd
-badid:
-    push dx 
-    mov dx, offset msgErrBadId 
-    call puts
-    pop dx
-manageErrorEnd:
+openTempEnd:    
     ret
-endp manageError
+endp openTemp
 
-
-createTemp proc                 
-    mov cx, 00h			    
-    mov dx, offset tempFileName
-    call createFile
-    cmp dx,1
-    je createTempEnd
-    mov tempFile,ax
-createTempEnd:
-    push dx 
-    mov dx, offset msgTempFileO
-    call puts  
-    pop dx    
-    ret
-endp createTemp
-
-checkSetPos proc            ; procedure sets flagNL if last symbol was New Line symbol, and flagSetPos, if buffer is not ended yet
-    cmp cx,1h               ; also proceudre adds 2 to buffSize(bx!) for CR and NL
-    jne jmpToCheckSetPos
-    mov flagWriteNL,1
-jmpToCheckSetPos:    
-    mov bx, buffSize
-    sub bx, cx
-    
+checkSetPos proc
     add bx,2
     cmp flagDelim,1
     je checkSetPosPos
@@ -569,89 +518,23 @@ checkSetPosEnd:
     ret
 endp checkSetPos
 
-copyDelToDelBuff proc     
+checkDel proc
     push cx
-    push si
     push di
-    push ax
     xor di,di
     xor cx,cx
-    mov si, offset delSym
     mov cl, delSymLen
-    xor ax,ax
-loopCopyDel:    
-    lodsb 
-    mov delBuff[di], al
+loopDelSym:
+    cmp al, delSym[di]
+    je setflagDel
     inc di
-    cmp al,0000h
-    je copyDelToBuffEnd
-    loop loopCopyDel 
-copyDelToBuffEnd:
-    xor cx, cx
-    mov cl, delSymLen
-    mov delBuffLen, cl
-    pop ax    
-    pop di
-    pop si
-    pop cx
-    ret
-endp copyDelToDelBuff
-
-shiftBuff proc          ; input: cx - current pos to be shifted by symbols from right
-    push di             ; ;; procedure sets new delBuffLen
-    push si
-    push dx
-    push cx
-
-    mov di, offset delBuff
-    mov si,di
-    xor dx,dx
-    mov dl, delBuffLen
-    sub dx, cx 
-    add di, dx
-    inc dx
-    add si,dx
-    rep movsb
-    dec delBuffLen
-
-    pop cx
-    pop dx
-    pop si
-    pop di
-    ret 
-endp shiftBuff
-
-checkDel proc           
-    push cx                 ; input: al -symbol to be checked
-    push di                 ; ;; 
-    push ax                 ; output: flagKeepCheck, flagDelim
-    cmp flagKeepCheck,1     
-    je keepCheck            
-    call copyDelToDelBuff
-keepCheck:
-    xor di, di
-    xor cx, cx
-    mov cl, delBuffLen
-loopCheckDelSym:
-    cmp al, delBuff[di]
-    jne notDelSym
-    call shiftBuff
-notDelSym:
-    inc di
-    loop loopCheckDelSym
-
-    cmp delBuffLen,0000h
-    jne setFlagKeepCheck
-    mov flagDelim,1
-    mov flagKeepCheck, 0
+    loop loopDelSym
 
     jmp checkDelEnd
-setFlagKeepCheck:
-    mov flagKeepCheck, 1
-    mov flagDelim,0
+setflagDel:
+    mov flagDelim,1
 checkDelEnd:
-    pop ax
-    pop di 
+    pop di
     pop cx
     ret
 endp checkDel
@@ -673,35 +556,10 @@ setFilePtrEnd:
     ret
 endp setFilePtr
 
-processLastTemp proc
-    cmp flagKeepDel,1
-    je closeLast
+processFile proc
 
-    cmp flagDelim,1
-    je closeLast
-
-    mov bx, tempFile
-    call closeFile
-    cmp dx,1
-    je processLastTempEnd
-    call addTempToDest
-    cmp dx,1
-    je processLastTempEnd
-closeLast: 
-    mov flagTempFile,0
-    mov bx, tempFile
-    call closeFile
-    cmp dx,1
-    je processLastTempEnd
-    mov dx, offset tempFileName
-    call delFile
-processLastTempEnd:
-    ret
-endp processLastTemp 
-
-processFile proc                ; ;; procedure that sets Source and destination file pointers, reads form source to buff, checks buffer for delimited symbols
-    mov bx, srcFile             ; manages writing and setting position according to flags, that checkBuff procedure sets or kills
-    xor al ,al 			        ; 
+    mov bx, srcFile
+    xor al ,al 			
     xor cx, cx
     xor dx, dx			
     call setFilePtr
@@ -717,10 +575,10 @@ processFile proc                ; ;; procedure that sets Source and destination 
     je jmpProcessFileEnd
 
     jmp readLoop
-    
 jmpProcessFileEnd:
     jmp processFileEnd
-
+jmpEndOfFile:
+    jmp endOfFile
 readLoop:
     mov buffSize,maxBuff
     mov buffPtr, offset buff
@@ -731,135 +589,142 @@ readLoop:
     call readFile
     cmp dx,1
     je jmpProcessFileEnd
-
     mov buffSize,ax
     cmp falgSkipNL,1
-    jne checkReadedSize
-
+    jne checkAx
     mov falgSkipNL,0
     dec buffSize
     inc buffPtr
-checkReadedSize:
+checkAx:
     cmp ax,0000h
-    ja checkBufferMark
+    ja checkBuffer
     cmp flagTempFile,1
-    jne jmpEOF
-    call processLastTemp
+    jne jmpEndOfFile
+    cmp flagKeepDel,1
+    je closeLast
 
-jmpEOF:
-    jmp endOfFile
+    cmp flagDelim,1
+    je closeLast
 
-checkBufferMark:
-    mov flagDelim,0
-    mov flagSetPos,0
-    call checkBuff         
+    mov bx, tempFile
+    call closeFile
     cmp dx,1
     je jmpProcessFileEnd
+    call addTempToDest
+closeLast: 
+    mov flagTempFile,0
+    mov bx, tempFile
+    call closeFile
+    cmp dx,1
+    je jmpjmpjmpProcessFileEnd
+    mov dx, offset tempFileName
+    call delFile
+    cmp dx,1
+    je jmpjmpjmpProcessFileEnd  
 
+    jmp jmpEndOfFile
+checkBuffer:
+    mov flagDelim,0
+    mov flagSetPos,0
+    call checkBuff          ; flags setPos, flagKeepDelim, flagDelim, bx -new pos
+    cmp dx,1
+    je jmpjmpjmpProcessFileEnd
     cmp flagTempFile,1
     je writeToTemp
     cmp flagKeepDel,1
-    je readLoop
+    je jmpjmpReadLoop
     cmp flagDelim,0
     je writeToDest
     cmp flagSetPos,1
-    je setNewPos
+    je jmpjmpsetNewPos
     jmp readLoop
-
-jmpsetNewPos:
+jmpjmpjmpProcessFileEnd:
+    jmp ProcessFileEnd    
+jmpjmpReadLoop:
+    jmp readLoop
+jmpjmpsetNewPos:
     jmp setNewPos
-
 writeToTemp:
+    push dx 
+    mov dx, offset msgTempFileW 
+    call puts
+    pop dx
+
     mov cx,bx  
     mov dx,buffPtr  
     mov bx, tempFile
     call writeToFile
     cmp dx,1
-    jne jmpReadLoop    ; if no error
-
-    jmp processFileEnd
+    je jmpjmpprocessFileEnd           ;;;;;;;;;;;;;
+    jmp readLoop
 writeToDest:
     cmp flagDeleted,1          ; sign that last line was processed already
-    je killDelFlag
+    je jmpSetNewPos
     cmp flagWriteNL,1
-    jne writeDest
+    jne wtd
     dec bx 
-writeDest:
+    wtd:
     mov cx,bx
     mov bx,destFile
     mov dx, buffPtr
     call writeToFile
     cmp dx,1
-    je processFileEnd
+    je jmpjmpprocessFileEnd
 
     cmp flagWriteNL,1
-    jne checkMaxBuffCase
+    jne checkNext
     push bx
-    mov bx, destFile
-    call writeNL
+        mov cx,1h
+        mov bx,destFile
+        mov dx,offset NL
+        mov ah,40h          
+        int 21h
+        jb jmpjmpprocessFileEnd
+        mov falgSkipNL,1
+        mov flagWriteNL,0
+        push dx 
+        mov dx, offset msgWritedNL 
+        call puts 
+        pop dx
     pop bx
-checkMaxBuffCase:
+checkNext:
     cmp bx,maxBuff
-    jne setNewPos
-
-jmpReadLoop:    
-    jmp readLoop
+    je jmpreadLoop
+    jmp setNewPos
 jmpjmpprocessFileEnd:    
     jmp processFileEnd
-
-killDelFlag:
-    mov flagDeleted,0
+jmpreadLoop:
+    jmp readLoop
+jmpSetNewPos:
     push dx 
-    mov dx, offset msgFlagDeWasKilled
-    call puts  
+    mov dx, offset msgFlagDeWasKilled 
+    call puts
     pop dx
+    mov flagDeleted,0
 setNewPos:
     push dx 
-    mov dx, offset msgSetPos
-    call puts  
+    mov dx, offset msgSetPos 
+    call puts
     pop dx
     add buffPtr, bx 
     sub buffSize, bx
     cmp buffSize, 0000h
-    jbe buffEnded                
-    jmp checkBufferMark 
+    je buffEnded                ;;;;;;check jbe
+    jmp checkBuffer 
 buffEnded:  
     push dx 
-    mov dx, offset msgBuffEnded
-    call puts  
+    mov dx, offset msgBuffEnded 
+    call puts   
     pop dx
     jmp readLoop
 endOfFile:
-    push dx
-    mov dx, offset msgEOF
-    call puts
+    push dx 
+    mov dx, offset msgEOF 
+    call puts 
     pop dx
 processFileEnd:
     ret 
 endp processFile
-
-writeNL proc
-    mov cx,1h
-    mov dx,offset NL
-    mov ah,40h          
-    int 21h
-    jb errWriteNL
-    mov falgSkipNL,1
-    mov flagWriteNL,0
-    push dx
-    mov dx, offset msgWritedNL
-    call puts 
-    pop dx
-    jmp writeNLEnd
-errWriteNL:
-    mov dx,1
-    push dx
-    mov dx, offset msgErrWNL
-    call puts
-    pop dx
-writeNLEnd:    
-    ret
-endp writeNL
 
 writeToFile proc        ; input: bx - num to write
     push cx             ; output: dx -1 if error, ax -err code              
@@ -875,28 +740,72 @@ writeToFile proc        ; input: bx - num to write
     mov dx,1  
 writeToFileEnd: 
     push dx 
-    mov dx, offset msgWrited
-    call puts  
+    mov dx, offset msgWrited 
+    call puts 
     pop dx
     ret
 endp writeToFile
 
 openSrcAndDest proc
+    mov ah, 3Dh			
     mov al, 20h			
     mov dx, offset srcFileName
     mov cl, 01h			
-    call openFile
-    cmp dx,1 
-    je openSrcAndDestEnd
+    int 21h
+    jb openErr	
     mov srcFile, ax	
-    
+
+    mov ah, 3Ch
     mov cx, 00h			    
     mov dx, offset destFileName
-    call createFile
-    cmp dx,1 
-    je openSrcAndDestEnd
+    int 21h
+    jb openErr	
     mov destFile, ax
-openSrcAndDestEnd:  
+
+    jmp openEnd
+openErr:
+    mov dx,1
+    cmp ax,02h
+    je nf
+    cmp ax, 03h
+    je pnf
+    cmp ax,04h
+    je tomch
+    cmp ax,05h
+    je access
+    cmp ax,0Ch
+    je wrr
+nf:
+    push dx 
+    mov dx, offset msgErrNf 
+    call puts
+    pop dx
+    jmp openEnd
+pnf:
+    push dx 
+    mov dx, offset msgErrPnf 
+    call puts
+    pop dx
+    jmp openEnd
+tomch:
+    push dx 
+    mov dx, offset msgErrTmn 
+    call puts
+    pop dx
+    jmp openEnd
+access:
+    push dx 
+    mov dx, offset msgErrAcc 
+    call puts
+    pop dx
+    jmp openEnd
+wrr:
+    push dx 
+    mov dx, offset msgErrWrm 
+    call puts
+    pop dx
+    jmp openEnd
+openEnd:  
     ret
 endp openSrcAndDest
 
@@ -992,4 +901,7 @@ parseEnd:
     pop cx
     ret
 endp parse
+
 end main
+    
+
